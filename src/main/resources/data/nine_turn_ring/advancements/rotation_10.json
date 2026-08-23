@@ -1,0 +1,25 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:rotation_10_adaptation"},
+    "title": {
+      "text": "",
+      "extra": [
+        {"text": "十", "color": "red"},
+        {"text": "转", "color": "gold"},
+        {"text": "·", "color": "yellow"},
+        {"text": "万", "color": "green"},
+        {"text": "象", "color": "aqua"}
+      ]
+    },
+    "description": {"text": "同时装备1-9转并完成所有前置进度"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "parent": "nine_turn_ring:root",
+  "criteria": {
+    "rot10": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["rot10"]]
+}

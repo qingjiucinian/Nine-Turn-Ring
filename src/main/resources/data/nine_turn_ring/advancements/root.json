@@ -1,0 +1,15 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:nine_turn_ring"},
+    "title": {"text": "无敌之始"},
+    "description": {"text": "将九转戒装备至饰品栏"},
+    "background": "minecraft:textures/gui/advancements/backgrounds/adventure.png",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "equip_ring": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["equip_ring"]]
+}

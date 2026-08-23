@@ -1,0 +1,16 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:rotation_8_luck"},
+    "title": {"text": "八转·天眷"},
+    "description": {"text": "获得八转·天眷并装备至饰品栏"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "nine_turn_ring:root",
+  "criteria": {
+    "rot8": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["rot8"]]
+}

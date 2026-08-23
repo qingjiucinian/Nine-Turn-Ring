@@ -1,0 +1,16 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:rotation_9_immortal"},
+    "title": {"text": "九转·不灭"},
+    "description": {"text": "获得九转·不灭并装备至饰品栏"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "nine_turn_ring:root",
+  "criteria": {
+    "rot9": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["rot9"]]
+}

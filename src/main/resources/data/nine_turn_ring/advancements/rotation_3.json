@@ -1,0 +1,15 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:rotation_3_night_vision"},
+    "title": {"text": "三转·洞幽"},
+    "description": {"text": "获得三转·洞幽并装备至饰品栏"},
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "nine_turn_ring:root",
+  "criteria": {
+    "rot3": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["rot3"]]
+}

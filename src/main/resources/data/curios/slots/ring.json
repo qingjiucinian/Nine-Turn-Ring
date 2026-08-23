@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "size": 1,
+  "order": 100,
+  "use_native_gui": true,
+  "add_cosmetic": false,
+  "render_toggle": true,
+  "icon": "curios:slot/empty_curio_slot",
+  "drop_rule": "default"
+}

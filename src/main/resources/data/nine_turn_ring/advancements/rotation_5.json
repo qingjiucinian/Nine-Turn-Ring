@@ -1,0 +1,15 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:rotation_5_health"},
+    "title": {"text": "五转·凝魄"},
+    "description": {"text": "击杀凋灵获得五转·凝魄并装备至饰品栏"},
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "nine_turn_ring:root",
+  "criteria": {
+    "rot5": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["rot5"]]
+}

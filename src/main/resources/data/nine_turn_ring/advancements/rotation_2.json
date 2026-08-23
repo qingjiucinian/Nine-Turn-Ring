@@ -1,0 +1,15 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:rotation_2_satiety"},
+    "title": {"text": "二转·辟谷"},
+    "description": {"text": "获得二转·辟谷并装备至饰品栏"},
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "nine_turn_ring:root",
+  "criteria": {
+    "rot2": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["rot2"]]
+}

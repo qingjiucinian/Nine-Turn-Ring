@@ -1,0 +1,16 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:rotation_7_undying"},
+    "title": {"text": "七转·涅槃"},
+    "description": {"text": "获得七转·涅槃并装备至饰品栏"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "nine_turn_ring:root",
+  "criteria": {
+    "rot7": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["rot7"]]
+}

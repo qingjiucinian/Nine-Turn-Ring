@@ -1,0 +1,15 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:rotation_1_power"},
+    "title": {"text": "一转·屠戮"},
+    "description": {"text": "获得一转·屠戮并装备至饰品栏"},
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "nine_turn_ring:root",
+  "criteria": {
+    "rot1": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["rot1"]]
+}

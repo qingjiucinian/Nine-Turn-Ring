@@ -1,0 +1,15 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:rotation_6_resistance"},
+    "title": {"text": "六转·不破"},
+    "description": {"text": "获得六转·不破并装备至饰品栏"},
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "nine_turn_ring:root",
+  "criteria": {
+    "rot6": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["rot6"]]
+}

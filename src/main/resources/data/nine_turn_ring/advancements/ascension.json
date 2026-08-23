@@ -1,0 +1,16 @@
+{
+  "display": {
+    "icon": {"item": "nine_turn_ring:nine_turn_ring"},
+    "title": {"text": "登神之路"},
+    "description": {"text": "完成五种伤害类型的适应"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "parent": "nine_turn_ring:rotation_10",
+  "criteria": {
+    "ascend": {"trigger": "minecraft:impossible"}
+  },
+  "requirements": [["ascend"]]
+}
