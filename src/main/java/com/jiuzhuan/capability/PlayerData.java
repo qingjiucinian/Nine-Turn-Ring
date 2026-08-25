@@ -60,6 +60,7 @@ public class PlayerData implements IPlayerData {
     private boolean natallyGotRot7 = false;
     private boolean totemEffectActive = false;
     private long totemEffectEndTime = 0;
+    private boolean announcedTotemBlessing = false;
     private int junkFishCount = 0;
     private boolean natallyGotRot8 = false;
     private int consecutiveTotemCount = 0;
@@ -221,6 +222,8 @@ public class PlayerData implements IPlayerData {
     @Override public void setTotemEffectActive(boolean value) { this.totemEffectActive = value; }
     @Override public long getTotemEffectEndTime() { return totemEffectEndTime; }
     @Override public void setTotemEffectEndTime(long time) { this.totemEffectEndTime = time; }
+    @Override public boolean hasAnnouncedTotemBlessing() { return announcedTotemBlessing; }
+    @Override public void setAnnouncedTotemBlessing(boolean value) { this.announcedTotemBlessing = value; }
 
     @Override public int getJunkFishCount() { return junkFishCount; }
     @Override public void addJunkFish() { this.junkFishCount++; }
@@ -320,6 +323,7 @@ public class PlayerData implements IPlayerData {
         tag.putBoolean("gotRot7", natallyGotRot7);
         tag.putBoolean("totemEffectActive", totemEffectActive);
         tag.putLong("totemEffectEnd", totemEffectEndTime);
+        tag.putBoolean("announcedTotemBlessing", announcedTotemBlessing);
         tag.putInt("junkFish", junkFishCount);
         tag.putBoolean("gotRot8", natallyGotRot8);
         tag.putInt("consecTotem", consecutiveTotemCount);
@@ -397,6 +401,7 @@ public class PlayerData implements IPlayerData {
         natallyGotRot7 = tag.getBoolean("gotRot7");
         totemEffectActive = tag.getBoolean("totemEffectActive");
         totemEffectEndTime = tag.getLong("totemEffectEnd");
+        announcedTotemBlessing = tag.getBoolean("announcedTotemBlessing");
         junkFishCount = tag.getInt("junkFish");
         natallyGotRot8 = tag.getBoolean("gotRot8");
         consecutiveTotemCount = tag.getInt("consecTotem");

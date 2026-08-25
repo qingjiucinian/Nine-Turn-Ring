@@ -59,7 +59,7 @@ public class NaturalGainHandler {
         });
     }
 
-    @SubscribeEvent(receiveCanceled = true)
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST, receiveCanceled = true)
     public void onLivingDeath(LivingDeathEvent event) {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide) return;
@@ -126,25 +126,18 @@ public class NaturalGainHandler {
                     needSync = true;
                 }
 
-                // 七转：在不死图腾持续效果期间死亡才算一层
-                if (!data.hasNatallyGotRot7() && data.isTotemEffectActive()) {
+                // 七转：不死图腾碎裂后45秒内彻底死亡才算一层
+                // 有图腾死亡：图腾碎裂救回玩家（没死），只标记效果期，不叠层
+                // 彻底死亡的叠层在 onPlayerRespawn 中处理（图腾救回不会触发复活事件）
+                if (!data.hasNatallyGotRot7() && hasTotem(player)) {
                     long now = System.currentTimeMillis();
-                    if (now < data.getTotemEffectEndTime()) {
-                        data.addTotemDeath();
-                        data.setTotemEffectActive(false);
-                        if (data.getTotemDeathCount() >= 3) {
-                            giveItemToPlayer(player, ModItems.ROTATION_7_UNDYING.get().getDefaultInstance(),
-                                    "item.nine_turn_ring.rotation_7_undying");
-                            data.setNatallyGotRot7(true);
-                        } else {
-                            player.sendSystemMessage(Component.translatable("nine_turn_ring.message.seven_challenge",
-                                    data.getTotemDeathCount()));
-                        }
-                        needSync = true;
-                    } else {
-                        data.setTotemEffectActive(false);
-                        needSync = true;
+                    data.setTotemEffectActive(true);
+                    data.setTotemEffectEndTime(now + 45000L);
+                    if (!data.hasAnnouncedTotemBlessing()) {
+                        player.sendSystemMessage(Component.translatable("nine_turn_ring.message.totem_blessing"));
+                        data.setAnnouncedTotemBlessing(true);
                     }
+                    needSync = true;
                 }
 
                 if (needSync) {
@@ -226,6 +219,39 @@ public class NaturalGainHandler {
         });
     }
 
+
+    /**
+     * 七转：玩家彻底死亡后复活时检测图腾效果期，叠一层
+     * 图腾救回玩家不会触发此事件，只有真正死亡后复活才会触发
+     */
+    @SubscribeEvent
+    public void onPlayerRespawn(net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide) return;
+        player.getCapability(PlayerDataProvider.PLAYER_DATA).ifPresent(data -> {
+            if (data.hasNatallyGotRot7()) return;
+            long now = System.currentTimeMillis();
+            if (data.isTotemEffectActive() && now < data.getTotemEffectEndTime()) {
+                data.addTotemDeath();
+                data.setTotemEffectActive(false);
+                data.setAnnouncedTotemBlessing(false);
+                if (data.getTotemDeathCount() >= 3) {
+                    giveItemToPlayer(player, ModItems.ROTATION_7_UNDYING.get().getDefaultInstance(),
+                            "item.nine_turn_ring.rotation_7_undying");
+                    data.setNatallyGotRot7(true);
+                } else {
+                    player.sendSystemMessage(Component.translatable("nine_turn_ring.message.seven_challenge",
+                            data.getTotemDeathCount()));
+                }
+                data.syncToClient(player);
+            } else if (data.isTotemEffectActive()) {
+                data.setTotemEffectActive(false);
+                data.setAnnouncedTotemBlessing(false);
+                data.syncToClient(player);
+            }
+        });
+    }
+
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -302,6 +328,14 @@ public class NaturalGainHandler {
     private boolean isStarvationDeath(DamageSource source) {
         String id = source.getMsgId();
         return id.equals("starve") || id.equals("starvation");
+    }
+
+    /**
+     * 检测玩家是否持有不死图腾（主手或副手）
+     */
+    private boolean hasTotem(Player player) {
+        return player.getMainHandItem().is(Items.TOTEM_OF_UNDYING)
+                || player.getOffhandItem().is(Items.TOTEM_OF_UNDYING);
     }
 
     private boolean isDarkEnvironment(Player player) {

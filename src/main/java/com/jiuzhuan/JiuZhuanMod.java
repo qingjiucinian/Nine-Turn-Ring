@@ -1,7 +1,8 @@
 package com.jiuzhuan;
 
 import com.jiuzhuan.capability.PlayerDataProvider;
-import com.jiuzhuan.client.HudConfig;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import com.jiuzhuan.config.ServerConfig;
 import com.jiuzhuan.curios.RingCurio;
 import com.jiuzhuan.event.*;
@@ -30,7 +31,10 @@ public class JiuZhuanMod {
         PlayerDataProvider.register();
         NetworkHandler.register();
         // 注册客户端配置（HUD位置等），生成在 config/nine_turn_ring/client.toml
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, HudConfig.SPEC, "nine_turn_ring/client.toml");
+        // 用DistExecutor隔离，避免服务端加载时引用客户端类
+        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> {
+            ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, com.jiuzhuan.client.HudConfig.SPEC, "nine_turn_ring/client.toml");
+        });
         // 注册通用配置（数值平衡等），生成在 config/nine_turn_ring/common.toml
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ServerConfig.SPEC, "nine_turn_ring/common.toml");
         modBus.addListener(this::commonSetup);

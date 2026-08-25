@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
@@ -22,17 +23,19 @@ import java.util.UUID;
 
 public class PlayerDeathHandler {
 
-    // 死亡时保存的所有本模组饰品：玩家UUID -> 物品列表
-    // 包括九转戒和所有轮转物品，复活时放回对应饰品槽，防止死亡掉落或背包满丢失
-    private static final Map<UUID, List<ItemStack>> deathSavedItems = new HashMap<>();
+    // 死亡时保存的Curios栏物品：玩家UUID -> 物品列表，复活时放回对应饰品槽
+    private static final Map<UUID, List<ItemStack>> deathSavedCurios = new HashMap<>();
+    // 死亡时从掉落物中移除的背包物品：玩家UUID -> 物品列表，复活时放回背包
+    private static final Map<UUID, List<ItemStack>> deathSavedInventory = new HashMap<>();
+    // 复活后待装备的物品：玩家UUID -> (物品列表, 剩余尝试tick数)
+    // 复活时Curios栏可能还没重建好，延迟几tick再装备
+    private static final Map<UUID, java.util.AbstractMap.SimpleEntry<List<ItemStack>, Integer>> pendingEquip = new HashMap<>();
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST)
     public void onLivingDeath(LivingDeathEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         if (player.level().isClientSide) return;
         player.getCapability(PlayerDataProvider.PLAYER_DATA).ifPresent(data -> {
-            if (!data.isRingEquipped()) return;
-
             // 7转不死：死亡事件中只检查isActivated状态，不检查饰品是否在槽中
             if (data.isActivated(7)) {
                 long now = System.currentTimeMillis();
@@ -50,22 +53,21 @@ public class PlayerDeathHandler {
             }
 
             // 玩家真死了：从Curios饰品栏取出所有本模组物品保存，复活时放回
-            // 包括九转戒和所有轮转物品，防止死亡掉落或背包满丢失
+            // 背包里的本模组物品不处理，正常掉落
             List<ItemStack> saved = extractAllModItemsFromCurios(player);
             if (!saved.isEmpty()) {
-                deathSavedItems.put(player.getUUID(), saved);
+                deathSavedCurios.put(player.getUUID(), saved);
             }
         });
     }
 
     /**
-     * 兜底：从掉落物列表中移除所有本模组物品，防止极端情况下仍出现在地上
+     * 兜底：从掉落物列表中移除所有本模组物品，用最低优先级确保在所有模组添加完掉落物后再移除
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
     public void onLivingDrops(LivingDropsEvent event) {
-        if (!(event.getEntity() instanceof Player player)) return;
-        if (player.level().isClientSide) return;
-        event.getDrops().removeIf(itemEntity -> isModItem(itemEntity.getItem()));
+        // 不处理掉落物：饰品栏的本模组物品已在 onLivingDeath 中取出保存
+        // 背包里的本模组物品正常掉落，不做任何干预
     }
 
     /**
@@ -76,20 +78,16 @@ public class PlayerDeathHandler {
         Player player = event.getEntity();
         if (player.level().isClientSide) return;
         player.getCapability(PlayerDataProvider.PLAYER_DATA).ifPresent(data -> {
-            // 从死亡保存中取回所有本模组物品，放回对应饰品槽
-            List<ItemStack> saved = deathSavedItems.remove(player.getUUID());
-            if (saved != null && !saved.isEmpty()) {
-                for (ItemStack stack : saved) {
-                    returnModItemToCurios(player, stack);
-                }
+            // 从死亡保存中取回Curios栏物品，放到待装备列表（延迟装备，等Curios栏重建）
+            List<ItemStack> curiosSaved = deathSavedCurios.remove(player.getUUID());
+            if (curiosSaved != null && !curiosSaved.isEmpty()) {
+                pendingEquip.put(player.getUUID(), new java.util.AbstractMap.SimpleEntry<>(curiosSaved, 100));
             } else if (!hasRing(player)) {
-                // 兜底：没有保存的物品且玩家没有戒指，给一个新的九转戒
-                ItemStack ring = new ItemStack(ModItems.NINE_TURN_RING.get());
-                if (!player.getInventory().add(ring)) {
-                    player.spawnAtLocation(ring);
-                }
+                // 兜底：没有保存的物品且玩家没有戒指，给一个新的九转戒（也延迟装备）
+                List<ItemStack> fallback = new ArrayList<>();
+                fallback.add(new ItemStack(ModItems.NINE_TURN_RING.get()));
+                pendingEquip.put(player.getUUID(), new java.util.AbstractMap.SimpleEntry<>(fallback, 100));
             }
-
             // 重置戒指装备状态，等Curios栏重建后由tick校验重新设置
             data.setRingEquipped(false);
             // 清除所有转的激活状态（死亡后轮转槽已清空）
@@ -100,6 +98,44 @@ public class PlayerDeathHandler {
             data.getAccessorySnapshot().clear();
             data.syncToClient(player);
         });
+    }
+
+    /**
+     * 玩家tick：尝试装备复活后待装备的物品
+     * 只装备死亡时保存的物品，不碰玩家背包里原有的备用件
+     */
+    @SubscribeEvent
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Player player = event.player;
+        if (player.level().isClientSide) return;
+        var entry = pendingEquip.get(player.getUUID());
+        if (entry == null) return;
+        List<ItemStack> items = entry.getKey();
+        int remaining = entry.getValue();
+        if (items.isEmpty() || remaining <= 0) {
+            // 超时或没有物品，剩下的放到背包
+            for (ItemStack stack : items) {
+                if (!player.getInventory().add(stack)) {
+                    player.spawnAtLocation(stack);
+                }
+            }
+            pendingEquip.remove(player.getUUID());
+            return;
+        }
+        // 尝试逐个装备
+        List<ItemStack> failed = new ArrayList<>();
+        for (ItemStack stack : items) {
+            if (!returnModItemToCurios(player, stack)) {
+                failed.add(stack);
+            }
+        }
+        if (failed.isEmpty()) {
+            pendingEquip.remove(player.getUUID());
+        } else {
+            entry.setValue(remaining - 1);
+            pendingEquip.put(player.getUUID(), new java.util.AbstractMap.SimpleEntry<>(failed, remaining - 1));
+        }
     }
 
     /**
@@ -130,29 +166,33 @@ public class PlayerDeathHandler {
     /**
      * 把本模组物品放回对应饰品槽：九转戒放回ring槽，轮转物品放回rotation槽
      */
-    private void returnModItemToCurios(Player player, ItemStack stack) {
-        if (stack.isEmpty()) return;
+    private boolean returnModItemToCurios(Player player, ItemStack stack) {
+        if (stack.isEmpty()) return false;
         try {
             Optional<ICuriosItemHandler> curiosOpt = CuriosApi.getCuriosInventory(player).resolve();
             if (curiosOpt.isPresent()) {
                 ICuriosItemHandler inv = curiosOpt.get();
-                String targetSlot = stack.is(ModItems.NINE_TURN_RING.get()) ? "ring" : "rotation";
-                var handler = inv.getCurios().get(targetSlot);
-                if (handler != null) {
+                boolean isRing = stack.is(ModItems.NINE_TURN_RING.get());
+                // 遍历所有槽位，找到对应类型的空槽位（用endsWith匹配，兼容带命名空间的槽id）
+                for (var entry : inv.getCurios().entrySet()) {
+                    String slotId = entry.getKey();
+                    if (isRing) {
+                        if (!slotId.equals("ring") && !slotId.endsWith(":ring")) continue;
+                    } else {
+                        if (!slotId.equals("rotation") && !slotId.endsWith(":rotation")) continue;
+                    }
+                    var handler = entry.getValue();
                     for (int i = 0; i < handler.getSlots(); i++) {
                         if (handler.getStacks().getStackInSlot(i).isEmpty()) {
                             handler.getStacks().setStackInSlot(i, stack);
-                            return;
+                            return true;
                         }
                     }
-                }
-                // 目标槽没有空位，放到背包
-                if (!player.getInventory().add(stack)) {
-                    player.spawnAtLocation(stack);
                 }
             }
         } catch (Exception ignored) {
         }
+        return false;
     }
 
     /**

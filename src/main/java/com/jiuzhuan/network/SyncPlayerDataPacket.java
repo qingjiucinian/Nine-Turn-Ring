@@ -1,7 +1,8 @@
 package com.jiuzhuan.network;
 
 import com.jiuzhuan.capability.PlayerDataProvider;
-import net.minecraft.client.Minecraft;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
@@ -25,13 +26,20 @@ public class SyncPlayerDataPacket {
 
     public static void handle(SyncPlayerDataPacket msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                mc.player.getCapability(PlayerDataProvider.PLAYER_DATA).ifPresent(data -> {
-                    data.loadNBT(msg.data);
-                });
+            if (ctx.get().getDirection().getReceptionSide().isClient()) {
+                handleClient(msg);
             }
         });
         ctx.get().setPacketHandled(true);
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    private static void handleClient(SyncPlayerDataPacket msg) {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.player != null) {
+            mc.player.getCapability(PlayerDataProvider.PLAYER_DATA).ifPresent(data -> {
+                data.loadNBT(msg.data);
+            });
+        }
     }
 }

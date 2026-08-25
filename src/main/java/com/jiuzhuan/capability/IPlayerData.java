@@ -125,6 +125,9 @@ public interface IPlayerData {
     void setTotemEffectActive(boolean value);
     long getTotemEffectEndTime();
     void setTotemEffectEndTime(long time);
+    // 是否已播放过图腾祝福提示（避免重复）
+    boolean hasAnnouncedTotemBlessing();
+    void setAnnouncedTotemBlessing(boolean value);
 
     // 八转：钓鱼垃圾计数
     int getJunkFishCount();

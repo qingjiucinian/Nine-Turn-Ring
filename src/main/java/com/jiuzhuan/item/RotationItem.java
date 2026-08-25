@@ -2,11 +2,10 @@ package com.jiuzhuan.item;
 
 import com.jiuzhuan.capability.IPlayerData;
 import com.jiuzhuan.capability.PlayerDataProvider;
-import com.jiuzhuan.client.AdaptationScreen;
-import com.jiuzhuan.client.RotationOverlay;
 import com.jiuzhuan.config.ServerConfig;
 import com.jiuzhuan.util.AdvancementUtil;
-import net.minecraft.client.Minecraft;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
@@ -162,11 +161,7 @@ public class RotationItem extends Item implements ICurioItem {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        Player clientPlayer = Minecraft.getInstance().player;
-        IPlayerData data = null;
-        if (clientPlayer != null) {
-            data = clientPlayer.getCapability(PlayerDataProvider.PLAYER_DATA).resolve().orElse(null);
-        }
+        IPlayerData data = (level != null && level.isClientSide) ? getClientPlayerData() : null;
 
         switch (rotationLevel) {
             case 1:
@@ -277,7 +272,7 @@ public class RotationItem extends Item implements ICurioItem {
                     List<String> completed = new ArrayList<>();
                     List<String> progressing = new ArrayList<>();
                     for (Map.Entry<String, Integer> e : levels.entrySet()) {
-                        String type = RotationOverlay.getDamageTypeName(e.getKey());
+                        String type = com.jiuzhuan.client.RotationOverlay.getDamageTypeName(e.getKey());
                         int lvl = e.getValue();
                         double reduction = data.getAdaptationReduction(e.getKey()) * 100;
                         if (lvl >= ServerConfig.getRot10MaxStacks()) {
@@ -318,7 +313,7 @@ public class RotationItem extends Item implements ICurioItem {
                     List<String> effectCompleted = new ArrayList<>();
                     List<String> effectProgressing = new ArrayList<>();
                     for (Map.Entry<String, Integer> e : effectLevels.entrySet()) {
-                        String effectName = AdaptationScreen.getEffectName(e.getKey());
+                        String effectName = com.jiuzhuan.client.AdaptationScreen.getEffectName(e.getKey());
                         int lvl = Math.min(e.getValue(), 5);
                         if (lvl <= 0) continue;
                         if (lvl >= 5) {
@@ -349,5 +344,14 @@ public class RotationItem extends Item implements ICurioItem {
                 break;
         }
         super.appendHoverText(stack, level, tooltip, flag);
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    private IPlayerData getClientPlayerData() {
+        Player player = net.minecraft.client.Minecraft.getInstance().player;
+        if (player != null) {
+            return player.getCapability(PlayerDataProvider.PLAYER_DATA).resolve().orElse(null);
+        }
+        return null;
     }
 }
