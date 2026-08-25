@@ -353,6 +353,7 @@ public class ModEventHandlers {
             if (!player.getAbilities().mayfly) {
                 player.getAbilities().mayfly = true;
                 player.onUpdateAbilities();
+                data.setFlightGrantedByMod(true);
                 // 首次获得飞行适应时发送提示
                 if (!data.hasAnnouncedFlightAdaptation()) {
                     data.setAnnouncedFlightAdaptation(true);
@@ -361,10 +362,12 @@ public class ModEventHandlers {
                 }
             }
         } else {
-            if (player.getAbilities().mayfly) {
+            // 只关闭模组自己授予的飞行，不影响其他模组（星月遗物、等价交换等）的飞行能力
+            if (data.isFlightGrantedByMod() && player.getAbilities().mayfly) {
                 player.getAbilities().mayfly = false;
                 player.getAbilities().flying = false;
                 player.onUpdateAbilities();
+                data.setFlightGrantedByMod(false);
             }
         }
     }

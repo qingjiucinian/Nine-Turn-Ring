@@ -68,6 +68,7 @@ public class PlayerData implements IPlayerData {
     private boolean natallyGotRot9 = false;
     private boolean natallyGotRot10 = false;
     private boolean announcedFlightAdaptation = false;
+    private boolean flightGrantedByMod = false;
     private final Set<String> grantedAdvancements = new HashSet<>();
     // 维度切换修复延迟（临时字段，不持久化）
     private transient int dimensionFixDelay = 0;
@@ -175,6 +176,8 @@ public class PlayerData implements IPlayerData {
     }
     @Override public boolean hasAnnouncedFlightAdaptation() { return announcedFlightAdaptation; }
     @Override public void setAnnouncedFlightAdaptation(boolean value) { this.announcedFlightAdaptation = value; }
+    @Override public boolean isFlightGrantedByMod() { return flightGrantedByMod; }
+    @Override public void setFlightGrantedByMod(boolean value) { this.flightGrantedByMod = value; }
     @Override public boolean hasOpenedFirstChest() { return openedFirstChest; }
     @Override public void setOpenedFirstChest(boolean value) { this.openedFirstChest = value; }
 
@@ -325,6 +328,7 @@ public class PlayerData implements IPlayerData {
         tag.putBoolean("gotRot9", natallyGotRot9);
         tag.putBoolean("gotRot10", natallyGotRot10);
         tag.putBoolean("announcedFlight", announcedFlightAdaptation);
+        tag.putBoolean("flightGrantedByMod", flightGrantedByMod);
 
         CompoundTag advTag = new CompoundTag();
         for (String key : grantedAdvancements) advTag.putBoolean(key, true);
@@ -401,6 +405,7 @@ public class PlayerData implements IPlayerData {
         natallyGotRot9 = tag.getBoolean("gotRot9");
         natallyGotRot10 = tag.getBoolean("gotRot10");
         announcedFlightAdaptation = tag.getBoolean("announcedFlight");
+        flightGrantedByMod = tag.getBoolean("flightGrantedByMod");
 
         grantedAdvancements.clear();
         if (tag.contains("advancements")) {

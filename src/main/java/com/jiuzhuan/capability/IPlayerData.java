@@ -67,6 +67,10 @@ public interface IPlayerData {
     boolean hasAnnouncedFlightAdaptation();
     void setAnnouncedFlightAdaptation(boolean value);
 
+    // 模组是否授予了飞行能力（用于区分模组飞行与其他模组飞行，避免冲突）
+    boolean isFlightGrantedByMod();
+    void setFlightGrantedByMod(boolean value);
+
     // 首箱标记
     boolean hasOpenedFirstChest();
     void setOpenedFirstChest(boolean value);

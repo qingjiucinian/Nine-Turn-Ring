@@ -99,11 +99,18 @@ public class AccessoryProtectionHandler {
         if (player.level().isClientSide) return;
         ItemStack stack = event.getStack();
         if (!isProtectedItem(stack)) return;
+        // 判断是否为玩家主动通过容器GUI卸下（打开了非背包容器）
+        boolean isManual = player.containerMenu != player.inventoryMenu;
+        if (!isManual) {
+            // 被强制卸下（被打/其他模组）：直接取消事件，物品不会离开饰品栏
+            event.setCanceled(true);
+            return;
+        }
+        // 玩家主动卸下：删除快照，设置冷却
         String slotKey = event.getSlotContext().identifier() + ":" + event.getSlotContext().index();
         player.getCapability(PlayerDataProvider.PLAYER_DATA).ifPresent(data -> {
             data.getAccessorySnapshot().remove(slotKey);
         });
-        // 记录手动取下时间，启动冷却
         manualUnequipTime.put(player.getUUID(), System.currentTimeMillis());
     }
 
@@ -249,9 +256,9 @@ public class AccessoryProtectionHandler {
                     }
                 }
 
-                // ===== 第三步已移除：不再从背包自动装备到Curios =====
-                // 玩家要求手动装备，物品放入背包后保持原位，需玩家手动拖入Curios槽位。
-                // 防BOSS强制摘取仍由第二步（快照恢复到原槽位）保障。
+                // ===== 第三步已移除：不再从背包自动装备轮转物品 =====
+                // 被强制卸下（被打/其他模组）时已在 CurioUnequipEvent 中直接取消，物品不会离开饰品栏。
+                // 玩家主动卸下的物品留在背包，需手动装备回去。九转戒的自动装备由第五层处理。
 
                 if (restored) {
                     data.syncToClient(player);
