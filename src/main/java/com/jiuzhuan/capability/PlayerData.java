@@ -36,6 +36,8 @@ public class PlayerData implements IPlayerData {
     private final Map<String, Integer> effectAdaptationLevels = new HashMap<>();
     private final Map<String, Long> effectAdaptationTimes = new HashMap<>();
     private final Map<String, Integer> effectExposureTicks = new HashMap<>();
+    private final java.util.Set<String> disabledDamageTypes = new java.util.HashSet<>();
+    private final java.util.Set<String> disabledEffectTypes = new java.util.HashSet<>();
     private static final int EFFECT_ADAPTATION_MAX_LEVEL = 5;
     private static final long EFFECT_ADAPTATION_CD_MS = 3000; // 3秒叠加一层
     private static final int EFFECT_EXPOSURE_THRESHOLD = 100; // 持续5秒(100tick)叠加一层
@@ -143,6 +145,11 @@ public class PlayerData implements IPlayerData {
     @Override public boolean hasFlightAdaptation() {
         return getCompletedAdaptationCount() >= 3;
     }
+    @Override public boolean isDamageAdaptationDisabled(String damageType) { return disabledDamageTypes.contains(damageType); }
+    @Override public void setDamageAdaptationDisabled(String damageType, boolean disabled) {
+        if (disabled) disabledDamageTypes.add(damageType); else disabledDamageTypes.remove(damageType);
+    }
+    @Override public java.util.Set<String> getDisabledDamageTypes() { return new java.util.HashSet<>(disabledDamageTypes); }
     // ===== 十转：负面效果适应 =====
     @Override public int getEffectAdaptationLevel(String effectId) {
         return effectAdaptationLevels.getOrDefault(effectId, 0);
@@ -175,6 +182,11 @@ public class PlayerData implements IPlayerData {
     @Override public void resetEffectExposureTicks(String effectId) {
         effectExposureTicks.put(effectId, 0);
     }
+    @Override public boolean isEffectAdaptationDisabled(String effectId) { return disabledEffectTypes.contains(effectId); }
+    @Override public void setEffectAdaptationDisabled(String effectId, boolean disabled) {
+        if (disabled) disabledEffectTypes.add(effectId); else disabledEffectTypes.remove(effectId);
+    }
+    @Override public java.util.Set<String> getDisabledEffectTypes() { return new java.util.HashSet<>(disabledEffectTypes); }
     @Override public boolean hasAnnouncedFlightAdaptation() { return announcedFlightAdaptation; }
     @Override public void setAnnouncedFlightAdaptation(boolean value) { this.announcedFlightAdaptation = value; }
     @Override public boolean isFlightGrantedByMod() { return flightGrantedByMod; }
@@ -307,6 +319,14 @@ public class PlayerData implements IPlayerData {
         }
         tag.put("effectAdaptation", effectAdaptTag);
 
+        // 适应禁用列表
+        net.minecraft.nbt.ListTag disabledDmg = new net.minecraft.nbt.ListTag();
+        for (String s : disabledDamageTypes) disabledDmg.add(net.minecraft.nbt.StringTag.valueOf(s));
+        tag.put("disabledDamage", disabledDmg);
+        net.minecraft.nbt.ListTag disabledEff = new net.minecraft.nbt.ListTag();
+        for (String s : disabledEffectTypes) disabledEff.add(net.minecraft.nbt.StringTag.valueOf(s));
+        tag.put("disabledEffect", disabledEff);
+
         tag.putInt("hungerDeaths", hungerDeathCount);
         tag.putBoolean("gotRot2", natallyGotRot2);
         tag.putInt("darkDeaths", darkDeathCount);
@@ -381,6 +401,17 @@ public class PlayerData implements IPlayerData {
                 effectAdaptationTimes.put(key, entry.time);
                 effectExposureTicks.put(key, entry.exposure);
             }
+        }
+        // 适应禁用列表（必须先清空，否则同步时旧数据残留）
+        disabledDamageTypes.clear();
+        disabledEffectTypes.clear();
+        if (tag.contains("disabledDamage")) {
+            net.minecraft.nbt.ListTag list = tag.getList("disabledDamage", 8);
+            for (int i = 0; i < list.size(); i++) disabledDamageTypes.add(list.getString(i));
+        }
+        if (tag.contains("disabledEffect")) {
+            net.minecraft.nbt.ListTag list = tag.getList("disabledEffect", 8);
+            for (int i = 0; i < list.size(); i++) disabledEffectTypes.add(list.getString(i));
         }
 
         hungerDeathCount = tag.getInt("hungerDeaths");

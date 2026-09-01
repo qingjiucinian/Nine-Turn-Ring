@@ -1,0 +1,16 @@
+{
+  "replace": false,
+  "values": [
+    "nine_turn_ring:nine_turn_ring",
+    "nine_turn_ring:rotation_1_power",
+    "nine_turn_ring:rotation_2_satiety",
+    "nine_turn_ring:rotation_3_night_vision",
+    "nine_turn_ring:rotation_4_regen",
+    "nine_turn_ring:rotation_5_health",
+    "nine_turn_ring:rotation_6_resistance",
+    "nine_turn_ring:rotation_7_undying",
+    "nine_turn_ring:rotation_8_luck",
+    "nine_turn_ring:rotation_9_immortal",
+    "nine_turn_ring:rotation_10_adaptation"
+  ]
+}

@@ -52,6 +52,11 @@ public class PlayerDeathHandler {
                 }
             }
 
+            // 开启死亡不掉落时，Curios物品会自动保留，不需要我们处理，否则会导致重复
+            if (player.level().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_KEEPINVENTORY)) {
+                return;
+            }
+
             // 玩家真死了：从Curios饰品栏取出所有本模组物品保存，复活时放回
             // 背包里的本模组物品不处理，正常掉落
             List<ItemStack> saved = extractAllModItemsFromCurios(player);

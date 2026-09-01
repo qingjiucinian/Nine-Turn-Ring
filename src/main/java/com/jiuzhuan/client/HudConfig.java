@@ -57,11 +57,11 @@ public class HudConfig {
     }
 
     public static int getIconsX() {
-        return ICONS_X.get();
+        try { return ICONS_X.get(); } catch (Exception e) { return 5; }
     }
 
     public static int getIconsY() {
-        return ICONS_Y.get();
+        try { return ICONS_Y.get(); } catch (Exception e) { return 5; }
     }
 
     public static void setIconsPos(int x, int y) {
@@ -70,7 +70,7 @@ public class HudConfig {
     }
 
     public static double getHudScale() {
-        return HUD_SCALE.get();
+        try { return HUD_SCALE.get(); } catch (Exception e) { return 1.0; }
     }
 
     public static void setHudScale(double scale) {

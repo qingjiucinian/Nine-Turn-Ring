@@ -24,6 +24,7 @@ import top.theillusivec4.curios.api.CuriosApi;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -235,7 +236,7 @@ public class ModEventHandlers {
             // 十转：负面效果适应——已满层适应的效果直接免疫
             if (data.isActivated(10)) {
                 ResourceLocation rl = ForgeRegistries.MOB_EFFECTS.getKey(effect);
-                if (rl != null && data.hasFullEffectAdaptation(rl.toString())) {
+                if (rl != null && data.hasFullEffectAdaptation(rl.toString()) && !data.isEffectAdaptationDisabled(rl.toString())) {
                     event.setResult(net.minecraftforge.eventbus.api.Event.Result.DENY);
                     return;
                 }
@@ -452,21 +453,21 @@ public class ModEventHandlers {
     private void applyFullAdaptationImmunities(Player player, IPlayerData data) {
         if (!data.isActivated(10)) return;
         // 溺水适应：无限氧气
-        if (data.hasFullAdaptation("drown")) {
+        if (data.hasFullAdaptation("drown") && !data.isDamageAdaptationDisabled("drown")) {
             player.setAirSupply(player.getMaxAirSupply());
         }
         // 冰冻适应：清除冰冻进度，不会被冻住
-        if (data.hasFullAdaptation("freeze")) {
+        if (data.hasFullAdaptation("freeze") && !data.isDamageAdaptationDisabled("freeze")) {
             player.setTicksFrozen(0);
         }
         // 火焰/燃烧/岩浆/岩浆块/雷击适应：清除燃烧状态，不会被灼烧
-        if (data.hasFullAdaptation("inFire") || data.hasFullAdaptation("onFire")
-                || data.hasFullAdaptation("lava") || data.hasFullAdaptation("hotFloor")
-                || data.hasFullAdaptation("lightningBolt")) {
+        if ((data.hasFullAdaptation("inFire") && !data.isDamageAdaptationDisabled("inFire")) || (data.hasFullAdaptation("onFire") && !data.isDamageAdaptationDisabled("onFire"))
+                || (data.hasFullAdaptation("lava") && !data.isDamageAdaptationDisabled("lava")) || (data.hasFullAdaptation("hotFloor") && !data.isDamageAdaptationDisabled("hotFloor"))
+                || (data.hasFullAdaptation("lightningBolt") && !data.isDamageAdaptationDisabled("lightningBolt"))) {
             player.clearFire();
         }
         // 凋灵适应：清除凋灵效果（4转也会免疫，这里作为满级适应的额外保障）
-        if (data.hasFullAdaptation("wither")) {
+        if (data.hasFullAdaptation("wither") && !data.isDamageAdaptationDisabled("wither")) {
             player.removeEffect(MobEffects.WITHER);
         }
     }
@@ -495,6 +496,11 @@ public class ModEventHandlers {
             ResourceLocation rl = ForgeRegistries.MOB_EFFECTS.getKey(effect);
             if (rl == null) continue;
             String effectId = rl.toString();
+
+            // 被禁用的效果类型：不免疫、不叠加，完全失效
+            if (data.isEffectAdaptationDisabled(effectId)) {
+                continue;
+            }
 
             // 满层适应：直接移除
             if (data.hasFullEffectAdaptation(effectId)) {

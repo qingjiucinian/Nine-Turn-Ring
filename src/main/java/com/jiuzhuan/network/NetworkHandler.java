@@ -32,5 +32,11 @@ public class NetworkHandler {
                 ToggleNightVisionPacket::decode,
                 ToggleNightVisionPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        INSTANCE.registerMessage(id++,
+                ToggleAdaptationPacket.class,
+                ToggleAdaptationPacket::encode,
+                ToggleAdaptationPacket::decode,
+                ToggleAdaptationPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 }

@@ -57,7 +57,7 @@ public class PlayerDamageHandler {
         player.getCapability(PlayerDataProvider.PLAYER_DATA).ifPresent(data -> {
             if (!data.isRingEquipped() || !data.isActivated(10)) return;
             String damageType = normalizeDamageType(event.getSource().getMsgId());
-            if (data.hasFullAdaptation(damageType)) {
+            if (data.hasFullAdaptation(damageType) && !data.isDamageAdaptationDisabled(damageType)) {
                 event.setCanceled(true);
                 immuneThisHit.add(player.getUUID());
                 // 销毁弹射物（箭矢、三叉戟、火球、烟花等），避免插在身上或继续存在
@@ -105,10 +105,11 @@ public class PlayerDamageHandler {
             }
 
             // 10转适应：受击时叠加层数（3秒cd），按类型减伤；满级则完全免疫
-            if (data.isActivated(10)) {
+            // 被禁用的伤害类型：不叠加层数，也不应用减伤/免疫
+            if (data.isActivated(10) && !data.isDamageAdaptationDisabled(damageType)) {
                 data.addAdaptation(damageType, now);
                 // 满级适应：完全免疫该类型伤害 + 击退 + 动画
-                if (data.hasFullAdaptation(damageType)) {
+                if (data.hasFullAdaptation(damageType) && !data.isDamageAdaptationDisabled(damageType)) {
                     cancelDamageCompletely(player, event);
                     data.syncToClient(player);
                     return;
@@ -222,7 +223,7 @@ public class PlayerDamageHandler {
             if (entity instanceof Player player) {
                 player.getCapability(PlayerDataProvider.PLAYER_DATA).ifPresent(data -> {
                     if (data.isRingEquipped() && data.isActivated(10)
-                            && data.hasFullAdaptation(damageType)) {
+                            && data.hasFullAdaptation(damageType) && !data.isDamageAdaptationDisabled(damageType)) {
                         toRemove.add(entity);
                     }
                 });

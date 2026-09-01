@@ -114,6 +114,8 @@
   "nine_turn_ring.message.totem_blessing": "§4不死图腾庇佑生效，45秒内死亡可叠加七转·涅槃挑战进度",
   "nine_turn_ring.message.eight_progress": "§7八转进度：钓到垃圾 %d/5",
   "nine_turn_ring.message.fly_adapt": "§a我适应了大地",
+  "nine_turn_ring.message.adapt_disabled": "已禁用适应：%s",
+  "nine_turn_ring.message.adapt_enabled": "已恢复适应：%s",
   "nine_turn_ring.message.effect_full_immune": "§d完全免疫了 %s",
   "nine_turn_ring.message.effect_adapt": "§d适应了 %s (%d/5)",
 

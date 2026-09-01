@@ -114,6 +114,8 @@
   "nine_turn_ring.message.totem_blessing": "§4Totem of Undying blessing active. Dying within 45s adds to 7th Turn challenge progress",
   "nine_turn_ring.message.eight_progress": "§78th Turn progress: Junk fished %d/5",
   "nine_turn_ring.message.fly_adapt": "§aI have adapted to the earth",
+  "nine_turn_ring.message.adapt_disabled": "Adaptation disabled: %s",
+  "nine_turn_ring.message.adapt_enabled": "Adaptation enabled: %s",
   "nine_turn_ring.message.effect_full_immune": "§dFully immune to %s",
   "nine_turn_ring.message.effect_adapt": "§dAdapted to %s (%d/5)",
 

@@ -272,7 +272,7 @@ public class RotationItem extends Item implements ICurioItem {
                     List<String> completed = new ArrayList<>();
                     List<String> progressing = new ArrayList<>();
                     for (Map.Entry<String, Integer> e : levels.entrySet()) {
-                        String type = com.jiuzhuan.client.RotationOverlay.getDamageTypeName(e.getKey());
+                        String type = com.jiuzhuan.util.NameUtil.getDamageTypeName(e.getKey());
                         int lvl = e.getValue();
                         double reduction = data.getAdaptationReduction(e.getKey()) * 100;
                         if (lvl >= ServerConfig.getRot10MaxStacks()) {
@@ -313,7 +313,7 @@ public class RotationItem extends Item implements ICurioItem {
                     List<String> effectCompleted = new ArrayList<>();
                     List<String> effectProgressing = new ArrayList<>();
                     for (Map.Entry<String, Integer> e : effectLevels.entrySet()) {
-                        String effectName = com.jiuzhuan.client.AdaptationScreen.getEffectName(e.getKey());
+                        String effectName = com.jiuzhuan.util.NameUtil.getEffectName(e.getKey());
                         int lvl = Math.min(e.getValue(), 5);
                         if (lvl <= 0) continue;
                         if (lvl >= 5) {

@@ -44,6 +44,10 @@ public interface IPlayerData {
     boolean hasFullAdaptation(String damageType);
     // 是否满足飞行适应条件（完成3种伤害类型适应）
     boolean hasFlightAdaptation();
+    // 伤害类型适应禁用列表（右键关闭后不再继续适应）
+    boolean isDamageAdaptationDisabled(String damageType);
+    void setDamageAdaptationDisabled(String damageType, boolean disabled);
+    java.util.Set<String> getDisabledDamageTypes();
     // ===== 十转：负面效果适应 =====
     // 某负面效果的适应层数（0-10）
     int getEffectAdaptationLevel(String effectId);
@@ -63,6 +67,10 @@ public interface IPlayerData {
     void addEffectExposureTicks(String effectId, int ticks);
     // 重置某负面效果的持续暴露计数（叠加一层后调用）
     void resetEffectExposureTicks(String effectId);
+    // 负面效果适应禁用列表（右键关闭后不再继续适应）
+    boolean isEffectAdaptationDisabled(String effectId);
+    void setEffectAdaptationDisabled(String effectId, boolean disabled);
+    java.util.Set<String> getDisabledEffectTypes();
     // 是否已播放过"我适应了大地"提示（避免重复）
     boolean hasAnnouncedFlightAdaptation();
     void setAnnouncedFlightAdaptation(boolean value);

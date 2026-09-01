@@ -7,6 +7,9 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
+import com.jiuzhuan.network.NetworkHandler;
+import com.jiuzhuan.network.ToggleAdaptationPacket;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,6 +27,7 @@ public class AdaptationScreen extends Screen {
     private static final int PANEL_GAP = 8;
     private static final int TITLE_HEIGHT = 18;
     private static final int LINE_HEIGHT = 11;
+    private static final int ENTRY_HEIGHT = LINE_HEIGHT + 8;
     private static final int SCROLL_STEP = 20;
 
     private final int panelWidth = (SCREEN_WIDTH - PANEL_PADDING * 3 - PANEL_GAP) / 2;
@@ -97,7 +101,8 @@ public class AdaptationScreen extends Screen {
                     status = Component.translatable("nine_turn_ring.screen.cooldown", String.format("%.1f", remain / 1000.0)).getString();
                 }
                 String info = Component.translatable("nine_turn_ring.screen.damage_reduction", reduction).getString();
-                leftEntries.add(new AdaptEntry(name, displayLvl, info, status, displayLvl >= 10, 10));
+                boolean dmgDisabled = data.isDamageAdaptationDisabled(e.getKey());
+                leftEntries.add(new AdaptEntry(e.getKey(), name, displayLvl, info, status, displayLvl >= 10, 10, dmgDisabled));
             }
             leftEntries.sort(Comparator.comparingInt((AdaptEntry a) -> a.level).reversed());
 
@@ -122,7 +127,8 @@ public class AdaptationScreen extends Screen {
                 String effectInfo = displayLvl >= 5
                         ? Component.translatable("nine_turn_ring.screen.full_immunity").getString()
                         : Component.translatable("nine_turn_ring.screen.effect_progress", displayLvl).getString();
-                rightEntries.add(new AdaptEntry(name, displayLvl, effectInfo, status, displayLvl >= 5, 5));
+                boolean effDisabled = data.isEffectAdaptationDisabled(e.getKey());
+                rightEntries.add(new AdaptEntry(e.getKey(), name, displayLvl, effectInfo, status, displayLvl >= 5, 5, effDisabled));
             }
             rightEntries.sort(Comparator.comparingInt((AdaptEntry a) -> a.level).reversed());
         });
@@ -176,17 +182,22 @@ public class AdaptationScreen extends Screen {
         graphics.enableScissor(x, y, x + w, y + h);
         int curY = y + 4 - scroll;
         for (AdaptEntry entry : entries) {
-            if (curY + LINE_HEIGHT < y || curY > y + h) {
-                curY += LINE_HEIGHT + 2;
+            if (curY + ENTRY_HEIGHT < y || curY > y + h) {
+                curY += ENTRY_HEIGHT;
                 continue;
             }
-            String levelColor = entry.maxed ? "§6" : "§f";
-            String line1 = "§7" + entry.name + " " + levelColor + "Lv." + entry.level + "/" + entry.maxLevel;
-            graphics.drawString(this.font, line1, x + 4, curY, 0xFFFFFF, false);
+            // 禁用条目加红色半透明背景遮罩
+            if (entry.disabled) {
+                graphics.fill(x + 1, curY - 1, x + w - 1, curY + ENTRY_HEIGHT - 1, 0x33FF0000);
+            }
+            String levelColor = entry.disabled ? "§8" : (entry.maxed ? "§6" : "§f");
+            String namePrefix = entry.disabled ? "§8§m" : "§7";
+            String line1 = namePrefix + entry.name + " " + levelColor + "Lv." + entry.level + "/" + entry.maxLevel + (entry.disabled ? " §c[已禁用]" : "");
+            graphics.drawString(this.font, line1, x + 4, curY, entry.disabled ? 0x666666 : 0xFFFFFF, false);
 
             String line2 = "  " + entry.info + " §7| " + entry.status;
-            graphics.drawString(this.font, line2, x + 4, curY + 10, 0xCCCCCC, false);
-            curY += LINE_HEIGHT + 8;
+            graphics.drawString(this.font, line2, x + 4, curY + 10, entry.disabled ? 0x555555 : 0xCCCCCC, false);
+            curY += ENTRY_HEIGHT;
         }
 
         if (entries.isEmpty()) {
@@ -197,7 +208,7 @@ public class AdaptationScreen extends Screen {
     }
 
     private void renderScrollBar(GuiGraphics graphics, int x, int y, int w, int h, int total, int scroll) {
-        int contentHeight = total * (LINE_HEIGHT + 8) + 4;
+        int contentHeight = total * ENTRY_HEIGHT + 4;
         if (contentHeight <= h) return;
         int barHeight = Math.max(20, (int) ((float) h / contentHeight * h));
         int maxScroll = contentHeight - h;
@@ -207,15 +218,59 @@ public class AdaptationScreen extends Screen {
     }
 
     @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // 右键点击条目切换禁用状态（只对满级条目生效）
+        if (button == 0) {
+            AdaptEntry clicked = findEntryAt(mouseX, mouseY);
+            if (clicked != null && clicked.maxed) {
+                boolean isLeft = mouseX >= leftX && mouseX <= leftX + panelWidth;
+                boolean newDisabled = !clicked.disabled;
+                NetworkHandler.INSTANCE.send(PacketDistributor.SERVER.noArg(),
+                        new ToggleAdaptationPacket(isLeft, clicked.id, newDisabled));
+                String msgKey = newDisabled ? "nine_turn_ring.message.adapt_disabled" : "nine_turn_ring.message.adapt_enabled";
+                if (getMinecraft().player != null) {
+                    getMinecraft().player.displayClientMessage(net.minecraft.network.chat.Component.translatable(msgKey, clicked.name), false);
+                }
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private AdaptEntry findEntryAt(double mouseX, double mouseY) {
+        // 检查左面板
+        if (mouseX >= leftX && mouseX <= leftX + panelWidth && mouseY >= panelY && mouseY <= panelY + panelHeight) {
+            int curY = panelY + 4 - leftScroll;
+            for (AdaptEntry entry : leftEntries) {
+                if (mouseY >= curY && mouseY <= curY + ENTRY_HEIGHT) {
+                    return entry;
+                }
+                curY += ENTRY_HEIGHT;
+            }
+        }
+        // 检查右面板
+        if (mouseX >= rightX && mouseX <= rightX + panelWidth && mouseY >= panelY && mouseY <= panelY + panelHeight) {
+            int curY = panelY + 4 - rightScroll;
+            for (AdaptEntry entry : rightEntries) {
+                if (mouseY >= curY && mouseY <= curY + ENTRY_HEIGHT) {
+                    return entry;
+                }
+                curY += ENTRY_HEIGHT;
+            }
+        }
+        return null;
+    }
+
+    @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (mouseX >= leftX && mouseX <= leftX + panelWidth && mouseY >= panelY && mouseY <= panelY + panelHeight) {
-            int contentHeight = leftEntries.size() * (LINE_HEIGHT + 8) + 4;
+            int contentHeight = leftEntries.size() * ENTRY_HEIGHT + 4;
             int maxScroll = Math.max(0, contentHeight - panelHeight);
             leftScroll = Math.max(0, Math.min(maxScroll, leftScroll - (int) (delta * SCROLL_STEP)));
             return true;
         }
         if (mouseX >= rightX && mouseX <= rightX + panelWidth && mouseY >= panelY && mouseY <= panelY + panelHeight) {
-            int contentHeight = rightEntries.size() * (LINE_HEIGHT + 8) + 4;
+            int contentHeight = rightEntries.size() * ENTRY_HEIGHT + 4;
             int maxScroll = Math.max(0, contentHeight - panelHeight);
             rightScroll = Math.max(0, Math.min(maxScroll, rightScroll - (int) (delta * SCROLL_STEP)));
             return true;
@@ -244,20 +299,24 @@ public class AdaptationScreen extends Screen {
     }
 
     private static class AdaptEntry {
+        final String id;
         final String name;
         final int level;
         final String info;
         final String status;
         final boolean maxed;
         final int maxLevel;
+        final boolean disabled;
 
-        AdaptEntry(String name, int level, String info, String status, boolean maxed, int maxLevel) {
+        AdaptEntry(String id, String name, int level, String info, String status, boolean maxed, int maxLevel, boolean disabled) {
+            this.id = id;
             this.name = name;
             this.level = level;
             this.info = info;
             this.status = status;
             this.maxed = maxed;
             this.maxLevel = maxLevel;
+            this.disabled = disabled;
         }
     }
 }
