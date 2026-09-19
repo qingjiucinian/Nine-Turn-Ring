@@ -4,19 +4,26 @@ import com.jiuzhuan.capability.PlayerDataProvider;
 import com.jiuzhuan.util.AdvancementUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
+import top.theillusivec4.curios.api.type.capability.ICurio.DropRule;
 import top.theillusivec4.curios.api.type.capability.ICurioItem;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class NineTurnRingItem extends Item implements ICurioItem {
@@ -50,10 +57,80 @@ public class NineTurnRingItem extends Item implements ICurioItem {
         return false;
     }
 
+    // 死亡保留：即使关闭死亡不掉落，九转戒也由 Curios 原生保留在戒指槽，不离槽、不掉落（对齐七咒之戒）
+    @Override
+    public DropRule getDropRule(SlotContext slotContext, DamageSource source, int lootingLevel, boolean recentlyHit, ItemStack stack) {
+        return DropRule.ALWAYS_KEEP;
+    }
+
+    // 允许手持右键直接装备到戒指槽
+    @Override
+    public boolean canEquipFromUse(SlotContext slotContext, ItemStack stack) {
+        return true;
+    }
+
     // 戒指无法被丢弃
     @Override
     public boolean onDroppedByPlayer(ItemStack item, Player player) {
         return false;
+    }
+
+    // 七咒式永恒绑定：戒指一旦出现在玩家背包且尚未装备，自动装备回戒指槽。
+    // 仅对九转戒生效（轮转物品不做自动装备）；创造/旁观模式跳过，否则创造模式取下后会被立刻拉回。
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+        if (level.isClientSide || !(entity instanceof Player player)) return;
+        if (player.isCreative() || player.isSpectator()) return;
+        // 已装备九转戒则不再处理，背包里的备用戒指原样保留，避免重复佩戴
+        if (hasRingEquipped(player)) return;
+        if (equipToEmptyRing(player, stack)) {
+            stack.shrink(1);
+        }
+    }
+
+    // 永恒绑定：禁止附上消失诅咒（否则死亡时戒指会消失，破坏绑定），对齐七咒之戒
+    @Override
+    public boolean isBookEnchantable(ItemStack stack, ItemStack book) {
+        Map<Enchantment, Integer> enchants = EnchantmentHelper.getEnchantments(book);
+        if (enchants.containsKey(Enchantments.VANISHING_CURSE)) return false;
+        return super.isBookEnchantable(stack, book);
+    }
+
+    // 检查玩家戒指槽是否已装备九转戒
+    private boolean hasRingEquipped(Player player) {
+        return CuriosApi.getCuriosInventory(player).resolve().map(inv -> {
+            for (var entry : inv.getCurios().entrySet()) {
+                String id = entry.getKey();
+                if (!id.equals("ring") && !id.endsWith(":ring")) continue;
+                var handler = entry.getValue();
+                for (int i = 0; i < handler.getSlots(); i++) {
+                    if (handler.getStacks().getStackInSlot(i).getItem() instanceof NineTurnRingItem) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }).orElse(false);
+    }
+
+    // 把一枚九转戒放入第一个空的戒指槽（保留NBT），成功返回true
+    private boolean equipToEmptyRing(Player player, ItemStack source) {
+        return CuriosApi.getCuriosInventory(player).resolve().map(inv -> {
+            for (var entry : inv.getCurios().entrySet()) {
+                String id = entry.getKey();
+                if (!id.equals("ring") && !id.endsWith(":ring")) continue;
+                var handler = entry.getValue();
+                for (int i = 0; i < handler.getSlots(); i++) {
+                    if (handler.getStacks().getStackInSlot(i).isEmpty()) {
+                        ItemStack equipped = source.copy();
+                        equipped.setCount(1);
+                        handler.getStacks().setStackInSlot(i, equipped);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }).orElse(false);
     }
 
     // 装备戒指时：开启10个轮转槽位（只在真正装备时调用）

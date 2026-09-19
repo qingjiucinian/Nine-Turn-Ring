@@ -25,8 +25,9 @@ import java.util.*;
  * 第二层：RotationItem.onDroppedByPlayer() 返回 false，禁止丢弃
  * 第三层：ItemTossEvent 监听，阻止戒指/轮转物品被扔出
  * 第四层（本类核心）：Tick 级快照监控，每5tick扫描Curios栏，
- *   若发现已装备的戒指/轮转物品被强制移除，立即从快照恢复到原槽位
- * 第五层：背包扫描兜底，若物品被移到背包中，自动装备回Curios槽位
+ *   若发现已装备的戒指/轮转物品被强制移除（含被彻底销毁），立即从快照恢复到原槽位
+ * 第五层：戒指被移到背包时的自动装备，已移至 NineTurnRingItem.inventoryTick
+ *   （每tick检测、不依赖装备状态标记、不会与快照恢复重复）
  */
 public class AccessoryProtectionHandler {
 
@@ -99,6 +100,8 @@ public class AccessoryProtectionHandler {
         if (player.level().isClientSide) return;
         ItemStack stack = event.getStack();
         if (!isProtectedItem(stack)) return;
+        // 死亡导致的卸下（轮转物品死亡掉落）一律放行，不取消、不删快照
+        if (player.isDeadOrDying()) return;
         // 判断是否为玩家主动通过容器GUI卸下（打开了非背包容器）
         boolean isManual = player.containerMenu != player.inventoryMenu;
         if (!isManual) {
@@ -131,6 +134,8 @@ public class AccessoryProtectionHandler {
         if (event.phase != TickEvent.Phase.END) return;
         Player player = event.player;
         if (player.level().isClientSide) return;
+        // 玩家死亡流程中不干预饰品：保证轮转按 Curios 规则正常掉落（九转戒由 ALWAYS_KEEP 自行保留，无需恢复）
+        if (player.isDeadOrDying()) return;
         if (player.tickCount % 5 != 0) return; // 每5tick检查一次（0.25秒）
 
         player.getCapability(PlayerDataProvider.PLAYER_DATA).ifPresent(data -> {
@@ -157,39 +162,9 @@ public class AccessoryProtectionHandler {
                     }
                 }
 
-                // ===== 第五层（恢复）：戒指自动装备保护 =====
-                // 戒指是核心物品，若被强制移到背包且ring槽有空位，自动装备回去
-                // （轮转物品仍需玩家手动装备，不在此自动恢复范围内）
-                var ringHandler = inv.getCurios().get("ring");
-                boolean ringInCurios = false;
-                if (ringHandler != null) {
-                    for (int i = 0; i < ringHandler.getSlots(); i++) {
-                        if (ringHandler.getStacks().getStackInSlot(i).is(ModItems.NINE_TURN_RING.get())) {
-                            ringInCurios = true;
-                            break;
-                        }
-                    }
-                }
-                if (!ringInCurios && ringHandler != null && ringHandler.getSlots() > 0) {
-                    // 在背包中找戒指
-                    int ringSlot = -1;
-                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                        if (player.getInventory().getItem(i).is(ModItems.NINE_TURN_RING.get())) {
-                            ringSlot = i;
-                            break;
-                        }
-                    }
-                    if (ringSlot >= 0) {
-                        // 找一个空的 ring 槽位放入
-                        for (int i = 0; i < ringHandler.getSlots(); i++) {
-                            if (ringHandler.getStacks().getStackInSlot(i).isEmpty()) {
-                                ItemStack ring = player.getInventory().removeItem(ringSlot, 1);
-                                ringHandler.getStacks().setStackInSlot(i, ring);
-                                break;
-                            }
-                        }
-                    }
-                }
+                // ===== 戒指自动装备已统一由 NineTurnRingItem.inventoryTick 处理 =====
+                // （每tick检测背包，不依赖 isRingEquipped，覆盖首次获得/被强制移到背包；
+                //   戒指被彻底销毁、背包中找不到时，仍由下方快照恢复兜底）
 
                 // ===== 第一步：扫描当前Curios栏中所有受保护物品，更新快照 =====
                 Map<String, ItemStack> currentEquipped = new HashMap<>();

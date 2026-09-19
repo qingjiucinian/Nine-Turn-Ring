@@ -68,7 +68,8 @@ public class PlayerDataProvider implements ICapabilityProvider, INBTSerializable
         }
     }
     // 玩家复活后重新校验戒指装备状态并同步
-    @SubscribeEvent
+    // LOWEST：最后执行，以复活后Curios槽位的实际状态为准，覆盖其他处理器设置的临时值（含死亡不掉落场景）
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
     public static void onPlayerRespawn(net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent event) {
         Player player = event.getEntity();
         if (player.level().isClientSide) return;
